@@ -1,5 +1,5 @@
 ﻿using System;
-using System.Collections.Generic;
+using System.Collections.Concurrent;
 using System.ComponentModel;
 using System.Data;
 using System.Diagnostics;
@@ -11,30 +11,47 @@ using MySql.Data.MySqlClient;
 using WaterShed.DataLogger.Properties;
 using System.Text.RegularExpressions;
 using System.IO;
-using System.Timers;
+using System.Threading;
 using NLog;
+using System.Runtime.Remoting.Messaging;
 
 namespace WaterShed.DataLogger
 {
 	public partial class DataLogger : ServiceBase
 	{
 		private MySqlConnection dbconn;
-		SerialPort sp;
+		private SerialPort sp;
+        private String recvdString = String.Empty;
 
+        private delegate void PacketProcessorCaller(string packet);
+        private PacketProcessorCaller caller;
+        // Used to make sure database writes have finished when we stop the service.
+        private int numRunning = 0;
+
+        /// <summary>
+        /// This logger is used for general logging.
+        /// </summary>
 		private static Logger logger = LogManager.GetCurrentClassLogger();
+        /// <summary>
+        /// This logger is used specifically for logging invalid packets.  It is separate so that it can
+        /// be more easily turned on and off as necessary.
+        /// </summary>
 		private static Logger logger2 = LogManager.GetLogger("DataPacket");
 
-		private Timer main_timer;
-
+        /// <summary>
+        /// This timer checks when the last packet came in, and restarts the service if
+        /// it hasn't received a packet since the last tick.
+        /// </summary>
+        private System.Timers.Timer checkForRecentInput;
 		private DateTime lastUpdate = DateTime.Now;
+        private DateTime lastTick = DateTime.Now;
 		
 		private void AppStart(string[] args)
 		{
-			main_timer = new Timer();
-
 			logger.Info("DataLogger Starting up.");
-			
-			dbconn = new MySqlConnection(DB.GetDBConn());
+
+            #region Try to Open Database
+            dbconn = new MySqlConnection(DB.GetDBConn());
 			try
 			{
 				dbconn.Open();
@@ -42,17 +59,29 @@ namespace WaterShed.DataLogger
 			catch (Exception ex)
 			{
 				logger.ErrorException("Failed to Open Database Connection.", ex);
-				//eventLog.WriteEntry("Failed to open DataBase Connection.  Exception: " + ex.Message, EventLogEntryType.Error);
 				throw ex; //need to put in more error handling
-			}
+            }
+            #endregion
 
-			sp = new SerialPort(Settings.Default.COMPort, 19200,Parity.None,8,StopBits.One);
+            #region Set up Timer to make sure input is still coming in
+            checkForRecentInput = new System.Timers.Timer(Settings.Default.RecentInputTimer_Interval);
+            checkForRecentInput.Elapsed += new System.Timers.ElapsedEventHandler(checkForRecentInput_Elapsed);
+            #endregion
 
-			try
+            #region Set up callback for processing received packets asynchroniously
+            caller = new PacketProcessorCaller(processPacketAsync);
+            #endregion
+
+            #region Set up and try to open serial port
+            sp = new SerialPort(Settings.Default.COMPort, Settings.Default.BaudRate,
+                Settings.Default.Parity, Settings.Default.DataBits, Settings.Default.StopBits);
+            sp.DataReceived += new SerialDataReceivedEventHandler(sp_DataReceived);
+
+            try
 			{
 				if (sp.IsOpen)
 				{
-					//Reset it fresh
+					//I can't imagine why this would already be the case... but we do it for safety.
 					sp.Close();
 				}
 				sp.Open();
@@ -62,198 +91,166 @@ namespace WaterShed.DataLogger
 			{
 				logger.ErrorException("Could not open Serial Port.", ex);
 				throw ex;
-			}
+            }
+            #endregion
 
-			main_timer.Elapsed += new ElapsedEventHandler(main_timer_Tick);
-			main_timer.Interval = Settings.Default.mainTimer_Interval;
-			main_timer.Start();
+            logger.Info("DataLogger Started Sucessfully!");
 		}
 
-		private bool isInTick = false;
+        /// <summary>
+        /// This method id fired when the serial port receives data.
+        /// It can be any number of bytes so we have to use <code>SerialPort.BytesToRead()</code>.
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        /// <remarks>
+        /// No need to worry about a data race because the event <code>lock</code>s on the
+        /// <code>SerialStream</code> that underlies the <code>SerialPort</code>.  See
+        /// http://social.msdn.microsoft.com/Forums/en-US/netfxbcl/thread/e36193cd-a708-42b3-86b7-adff82b19e5e/
+        /// </remarks>
+        void sp_DataReceived(object sender, SerialDataReceivedEventArgs e)
+        {
+            while (sp.BytesToRead > 0)
+            {
+                char dataChar = (char)sp.ReadChar();
 
-		private void main_timer_Tick(object sender, EventArgs e)
-		{
-			String recvdString = "";
-			char dataChar;
+                // if we have reached the end of a packet
+                if (recvdString.IndexOf("<< ") >= 0)
+                {
+                    // The next three characters are check digits for this packet.
+                    for (int i = 0; i < 3; i++)
+                    {
+                        recvdString += (char)sp.ReadChar();
+                    }
 
-			if (!isInTick)
-			{
-				logger.Trace("Tick");
-				isInTick = true;
-			}
-			else
-			{
-				logger.Trace("Tick - Ignored: Already in Tick");
-				return;
-			}
+                    // Send the complete packet to be processed
+                    //caller.BeginInvoke(String.Copy(recvdString), null, null);
+                    caller.BeginInvoke(String.Copy(recvdString), CallBackMethodForDelegate, null);
+                    // clear out the receive buffer to get the next packet
+                    recvdString = "";
+                }
+                else
+                {
+                    recvdString += dataChar;
+                }
+            }
+        }
 
-			//DateTime duration = lastUpdate.AddMinutes(2);
-			if (lastUpdate.AddMinutes(2) < DateTime.Now)
-			{
-				//logger.Info("No Data in last two minutes.  Attempting reconnection to serial port.");
-				logger.Info("No Data in last two minutes.  Attempting service restart.");
-				try
-				{
-					sp.Close();
-				}
-				finally { }
-				
-				main_timer.Stop();
-				sp = null;
-				System.Threading.Thread.Sleep(10 * 1000);
+        /// <summary>
+        /// Check whether we have received packet(s) since the last tick.
+        /// If we haven't, restart the DataLogger.
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        /// <remarks>
+        /// Called by <see cref="ElapsedEventHandler.ElapsedEventHandler"/>.
+        /// </remarks>
+        void checkForRecentInput_Elapsed(object sender, System.Timers.ElapsedEventArgs e)
+        {
+            if (lastUpdate < lastTick)
+            {
+                logger.Info("No Data in last two minutes.  Attempting service restart.");
+                try
+                {
+                    sp.Close();
+                }
+                finally { }
 
-				Environment.Exit(1); //This makes the service manager see a crashed service process and restart it.
+                sp = null;
 
-				//sp = new SerialPort(Settings.Default.COMPort, 19200, Parity.None, 8, StopBits.One);
-				//try
-				//{
-				//	sp.Open();
-				//}
-				//catch (Exception ex)
-				//{
-				//	logger.ErrorException("Could not re-open Serial Port.", ex);
-				//
-				//	duration.AddMinutes(13);
-				//	if (duration < DateTime.Now)
-				//	{
-				//		logger.Info("No data in last fifteen minutes.  Attempting System restart.");
-				//		Process.Start("shutdown", "/r /t 0");
-				//	}
-				//
-				//	//Don't throw - instead wait until next tick and try again.
-				//	//throw ex;
-				//}
-				//main_timer.Start();
-			}
+                Environment.Exit(1); //This makes the service manager see a crashed service process and restart it.
+            }
+            lastTick = e.SignalTime;
+        }
 
-			try
-			{
-				if (sp.IsOpen)
-				{
-					while (sp.BytesToRead > 0)
-					{
-						//dataChar = Convert.ToChar(sp.ReadByte()).ToString();
-						//dataChar = (byte)sp.ReadByte();
-						dataChar = Microsoft.VisualBasic.Strings.Chr(sp.ReadChar());
+        /// <summary>
+        /// Process a complete packet received from the DataLogger system.
+        /// Check that it is valid and then store its payload in the database.
+        /// </summary>
+        /// <param name="dataLine">A string containing the packet</param>
+        void processPacketAsync(string dataLine)
+        {
+            logger.Trace("Received Complete Packet.");
 
-						Console.Write(dataChar);
+            // Prevent service from stopping while we are processing a packet.
+            Interlocked.Increment(ref numRunning);
 
-						if (recvdString.IndexOf("<< ") >= 0)
-						{
-							for (int i = 0; i < 3; i++)
-							{
-								recvdString += Microsoft.VisualBasic.Strings.Chr(sp.ReadChar());
-							}
+            try
+            {
+                int endPosition = dataLine.IndexOf('<');
 
-							processPacket(recvdString.ToString());
-							recvdString = "";
-						}
-						else
-						{
-							recvdString += dataChar;
-						}
-					}
-				}
-				else
-				{
-					try
-					{
-						logger.Warn("Port not open on Tick.  Trying to Open");
-						sp.Open();
-					}
-					catch (Exception ex)
-					{
-						logger.ErrorException("Could not re-open Serial Port.", ex);
-						//throw ex;
-					}
-				}
-			}
-			catch (Exception ex)
-			{
-				logger.ErrorException("Some Kind of Error Occured.", ex);
+                int checksum = 0;
+                try
+                {
+                    checksum = int.Parse(dataLine.Substring(endPosition + 1).Split()[1]);
+                }
+                catch (Exception)
+                {
+                    logger.Debug("Invalid Checksum.  Discarding Packet. (Checksum not number or not present");
+                    logger2.Debug(dataLine);
+                    // A missing checksum invalidates the packet so we skip it and move on.
+                    return;
+                }
 
-				sp.Close();
-				throw ex;
-			}
-			finally
-			{
-				// allow the next tick to start
-				isInTick = false;
-			}
-		}
+                string regex = @"^(\s*>>.*<<\s*)";
+                RegexOptions options = RegexOptions.Singleline;
+                Match m = Regex.Match(dataLine, regex, options);
 
-		public void processPacket(string dataLine)
-		{
-			logger.Trace("Received Complete Packet.");
-			try
-			{
-				int endPosition = dataLine.IndexOf('<');
+                string packet = m.ToString();
 
-				int checksum = 0;
-				try
-				{
-					checksum = int.Parse(dataLine.Substring(endPosition + 1).Split()[1]);
-				}
-				catch (Exception)
-				{
-					logger.Debug("Invalid Checksum.  Discarding Packet. (Checksum not number or not present");
-					logger2.Debug(dataLine);
-					// A missing checksum invalidates the packet so we skip it and move on.
-					return;
-				}
+                int checksumCounter = 0;
+                foreach (char c in packet)
+                {
+                    checksumCounter ^= c;
+                }
 
-				string regex = @"^(\s*>>.*<<\s*)";
-				RegexOptions options = RegexOptions.Singleline;
-				Match m = Regex.Match(dataLine, regex, options);
+                if (checksumCounter != checksum)
+                {
+                    logger.Debug("Incorrect Checksum.  Discarding Packet. (Not match)");
+                    logger2.Debug(dataLine);
+                    return; //ignore broken packet
+                }
 
-				string packet = m.ToString();
+                char[] sep = { ' ' };
+                string[] packetPieces = packet.Split(sep, 7,
+                    StringSplitOptions.RemoveEmptyEntries);
 
-				int checksumCounter = 0;
-				foreach (char c in packet)
-				{
-					checksumCounter ^= c;
-				}
+                if (packetPieces[1] != "STAT")
+                    return; // not for us
 
-				if (checksumCounter != checksum)
-				{
-					logger.Debug("Incorrect Checksum.  Discarding Packet. (Not match)");
-					logger2.Debug(dataLine);
-					return; //ignore broken packet
-				}
+                String[] sub_types = { "SENSOR_VALUE", "RELAY_STATE", "CTRL_VALUE" };
+                if (!sub_types.Contains(packetPieces[5]))
+                    return; // not for us
 
-				char[] sep = { ' ' };
-				string[] packetPieces = packet.Split(sep, 7,
-					StringSplitOptions.RemoveEmptyEntries);
+                int length = int.Parse(packetPieces[4]);
 
-				if (packetPieces[1] != "STAT")
-					return; // not for us
+                packetPieces[6] = packetPieces[6].Substring(0, length)
+                    .Replace(':', ' ').Replace('|', ' ');
 
-				String[] sub_types = { "SENSOR_VALUE", "RELAY_STATE", "CTRL_VALUE" };
-				if (!sub_types.Contains(packetPieces[5]))
-					return; // not for us
+                string[] dataPoints = packetPieces[6].Split(sep, StringSplitOptions.RemoveEmptyEntries);
 
-				int length = int.Parse(packetPieces[4]);
+                int i = 2;
+                while (i < dataPoints.Length)
+                {
+                    (new DataPoint(dataPoints[1], dataPoints[i++], dataPoints[i++])).Save(dbconn);
 
-				packetPieces[6] = packetPieces[6].Substring(0, length)
-					.Replace(':', ' ').Replace('|', ' ');
+                    lastUpdate = DateTime.Now;
+                }
+            }
+            catch (Exception ex)
+            {
+                logger.InfoException("Error Processing Packet", ex);
+                return;
+            }
 
-				string[] dataPoints = packetPieces[6].Split(sep, StringSplitOptions.RemoveEmptyEntries);
+        }
 
-				int i = 2;
-				while (i < dataPoints.Length)
-				{
-					(new DataPoint(dataPoints[1], dataPoints[i++], dataPoints[i++])).Save(dbconn);
-					
-					lastUpdate = DateTime.Now;
-				}
-			}
-			catch (Exception ex)
-			{
-				logger.InfoException("Error Processing Packet", ex);
-				return;
-			}
-
-		}
+        public void CallBackMethodForDelegate(IAsyncResult result)
+        {
+            PacketProcessorCaller caller = (PacketProcessorCaller)((AsyncResult)result).AsyncDelegate;
+            caller.EndInvoke(result);
+            Interlocked.Decrement(ref numRunning);
+        }
 
 		#region Overrides and Constructors
 		protected override void OnStart(string[] args)
@@ -264,6 +261,12 @@ namespace WaterShed.DataLogger
 		protected override void OnStop()
 		{
 			logger.Info("DataLogger was sent STOP signal.");
+            sp.DataReceived -= sp_DataReceived;
+            while (numRunning > 0)
+            {
+                // Wait for database writes in progress to finish
+                Thread.Sleep(50);
+            }
 			try
 			{
 				dbconn.Close();
@@ -274,14 +277,14 @@ namespace WaterShed.DataLogger
 		protected override void OnPause()
 		{
 			logger.Info("DataLogger was sent PAUSE signal.");
-			main_timer.Stop();
+            sp.DataReceived -= sp_DataReceived;
 			base.OnPause();
 		}
 
 		protected override void OnContinue()
 		{
 			logger.Info("DataLogger was sent CONTINUE signal.");
-			main_timer.Start();
+            sp.DataReceived += new SerialDataReceivedEventHandler(sp_DataReceived);
 			base.OnContinue();
 		}
 
