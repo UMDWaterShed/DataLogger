@@ -55,7 +55,7 @@
     <ApplicationManifest>app.manifest</ApplicationManifest>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="MySql.Data, Version=6.3.6.0, Culture=neutral, PublicKeyToken=c5687fc88969c44d, processorArchitecture=MSIL" />
+    <Reference Include="MySql.Data, Version=6.4.4.0, Culture=neutral, PublicKeyToken=c5687fc88969c44d, processorArchitecture=MSIL" />
     <Reference Include="System" />
     <Reference Include="System.Configuration.Install" />
     <Reference Include="System.Core" />
@@ -79,19 +79,10 @@
     <Compile Include="ServiceControl.Designer.cs">
       <DependentUpon>ServiceControl.cs</DependentUpon>
     </Compile>
-    <Compile Include="SensorEditor.cs">
-      <SubType>Form</SubType>
-    </Compile>
-    <Compile Include="SensorEditor.Designer.cs">
-      <DependentUpon>SensorEditor.cs</DependentUpon>
-    </Compile>
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <EmbeddedResource Include="ServiceControl.resx">
       <DependentUpon>ServiceControl.cs</DependentUpon>
-    </EmbeddedResource>
-    <EmbeddedResource Include="SensorEditor.resx">
-      <DependentUpon>SensorEditor.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="Properties\Resources.resx">
       <Generator>ResXFileCodeGenerator</Generator>

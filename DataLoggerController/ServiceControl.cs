@@ -67,12 +67,10 @@ namespace DataLoggerController
 				case ServiceControllerStatus.Paused:
 					button1.Enabled = true;
 					button2.Enabled = false;
-					button3.Enabled = false;
 					break;
 				case ServiceControllerStatus.Running:
 					button1.Enabled = false;
 					button2.Enabled = true;
-					button3.Enabled = true;
 					pictureBox1.Image = Properties.Resources.play;
 					break;
 				case ServiceControllerStatus.PausePending:
@@ -81,12 +79,10 @@ namespace DataLoggerController
 				case ServiceControllerStatus.StopPending:
 					button1.Enabled = false;
 					button2.Enabled = false;
-					button3.Enabled = false;
 					break;
 				case ServiceControllerStatus.Stopped:
 					button1.Enabled = true;
 					button2.Enabled = false;
-					button3.Enabled = false;
 					pictureBox1.Image = Properties.Resources.stop;
 					break;
 				default:
@@ -155,20 +151,9 @@ namespace DataLoggerController
 			UpdateServiceStatus();
 		}
 
-		private void button4_Click(object sender, EventArgs e)
-		{
-			Form editor = new SensorEditor();
-			editor.ShowDialog();
-		}
-
 		private void button2_Click(object sender, EventArgs e)
 		{
 			sc1.Stop();
-		}
-
-		private void button3_Click(object sender, EventArgs e)
-		{
-			sc1.ExecuteCommand((int)Commands.ReloadSensors);
 		}
 
 		private void button6_Click(object sender, EventArgs e)
