@@ -5,8 +5,6 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WaterShed DataLogger", "Wat
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DataLoggerController", "DataLoggerController\DataLoggerController.csproj", "{3C40F383-1368-4DDA-BAA5-6451BE718BA2}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WindowsFormsApplication1", "WindowsFormsApplication1\WindowsFormsApplication1.csproj", "{3A62BD46-83A2-4DA7-B935-48CDDA90926E}"
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DataToWeb", "DataToWeb\DataToWeb.csproj", "{7F46F143-2A67-4229-8E3C-0630B5ACACC2}"
 EndProject
 Project("{54435603-DBB4-11D2-8724-00A0C9A8B90C}") = "DataLogger Setup", "DataLogger Setup\DataLogger Setup.vdproj", "{238D0284-6876-4A83-A63D-414D0A1A96D5}"
@@ -14,6 +12,12 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WaterShed Enphase Logger", "WaterShed Enphase Logger\WaterShed Enphase Logger.csproj", "{2F287D63-4FC9-4297-BD96-9BA5FAEB0F24}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EnphaseParser", "EnphaseParser\EnphaseParser.csproj", "{D4A62F42-BD00-4CF5-837F-4EC2FE412AB2}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = ".nuget", ".nuget", "{65E88051-D802-4D5B-BCFE-084EF8BABFDC}"
+	ProjectSection(SolutionItems) = preProject
+		.nuget\NuGet.exe = .nuget\NuGet.exe
+		.nuget\NuGet.targets = .nuget\NuGet.targets
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -45,16 +49,6 @@ Global
 		{3C40F383-1368-4DDA-BAA5-6451BE718BA2}.Release|Mixed Platforms.Build.0 = Release|x86
 		{3C40F383-1368-4DDA-BAA5-6451BE718BA2}.Release|x86.ActiveCfg = Release|x86
 		{3C40F383-1368-4DDA-BAA5-6451BE718BA2}.Release|x86.Build.0 = Release|x86
-		{3A62BD46-83A2-4DA7-B935-48CDDA90926E}.Debug|Any CPU.ActiveCfg = Debug|x86
-		{3A62BD46-83A2-4DA7-B935-48CDDA90926E}.Debug|Mixed Platforms.ActiveCfg = Debug|x86
-		{3A62BD46-83A2-4DA7-B935-48CDDA90926E}.Debug|Mixed Platforms.Build.0 = Debug|x86
-		{3A62BD46-83A2-4DA7-B935-48CDDA90926E}.Debug|x86.ActiveCfg = Debug|x86
-		{3A62BD46-83A2-4DA7-B935-48CDDA90926E}.Debug|x86.Build.0 = Debug|x86
-		{3A62BD46-83A2-4DA7-B935-48CDDA90926E}.Release|Any CPU.ActiveCfg = Release|x86
-		{3A62BD46-83A2-4DA7-B935-48CDDA90926E}.Release|Mixed Platforms.ActiveCfg = Release|x86
-		{3A62BD46-83A2-4DA7-B935-48CDDA90926E}.Release|Mixed Platforms.Build.0 = Release|x86
-		{3A62BD46-83A2-4DA7-B935-48CDDA90926E}.Release|x86.ActiveCfg = Release|x86
-		{3A62BD46-83A2-4DA7-B935-48CDDA90926E}.Release|x86.Build.0 = Release|x86
 		{7F46F143-2A67-4229-8E3C-0630B5ACACC2}.Debug|Any CPU.ActiveCfg = Debug|x86
 		{7F46F143-2A67-4229-8E3C-0630B5ACACC2}.Debug|Mixed Platforms.ActiveCfg = Debug|x86
 		{7F46F143-2A67-4229-8E3C-0630B5ACACC2}.Debug|Mixed Platforms.Build.0 = Debug|x86
