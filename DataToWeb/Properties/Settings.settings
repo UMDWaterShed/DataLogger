@@ -1,0 +1,30 @@
+﻿<?xml version='1.0' encoding='utf-8'?>
+<SettingsFile xmlns="http://schemas.microsoft.com/VisualStudio/2004/01/settings" CurrentProfile="(Default)" GeneratedClassNamespace="WaterShed.DataToWeb.Properties" GeneratedClassName="Settings">
+  <Profiles />
+  <Settings>
+    <Setting Name="mainTimer_Interval" Type="System.Int32" Scope="Application">
+      <Value Profile="(Default)">60000</Value>
+    </Setting>
+    <Setting Name="CheckURL" Type="System.String" Scope="Application">
+      <Value Profile="(Default)">https://data.solarteam.org/fromwhen.php</Value>
+    </Setting>
+    <Setting Name="PostURL" Type="System.String" Scope="Application">
+      <Value Profile="(Default)">https://data.solarteam.org/post.php</Value>
+    </Setting>
+    <Setting Name="PostUser" Type="System.String" Scope="Application">
+      <Value Profile="(Default)">$HTTPPOSTUSER</Value>
+    </Setting>
+    <Setting Name="PostPass" Type="System.String" Scope="Application">
+      <Value Profile="(Default)">$HTTPPOSTPASSWORD</Value>
+    </Setting>
+    <Setting Name="ConnString" Type="System.String" Scope="Application">
+      <Value Profile="(Default)">Server=localhost;Port=3306;Database=$DBNAME;Uid=$DBUSER;Pwd=$DBPASSWORD;</Value>
+    </Setting>
+    <Setting Name="Timeout" Type="System.Int32" Scope="Application">
+      <Value Profile="(Default)">90</Value>
+    </Setting>
+    <Setting Name="NumRowsAtATime" Type="System.Int32" Scope="Application">
+      <Value Profile="(Default)">1000</Value>
+    </Setting>
+  </Settings>
+</SettingsFile>

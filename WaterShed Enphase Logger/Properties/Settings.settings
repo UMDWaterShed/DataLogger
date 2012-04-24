@@ -1,0 +1,15 @@
+﻿<?xml version='1.0' encoding='utf-8'?>
+<SettingsFile xmlns="http://schemas.microsoft.com/VisualStudio/2004/01/settings" CurrentProfile="(Default)" GeneratedClassNamespace="WaterShed.Enphase_Logger.Properties" GeneratedClassName="Settings">
+  <Profiles />
+  <Settings>
+    <Setting Name="mainTimer_Interval" Type="System.Int32" Scope="Application">
+      <Value Profile="(Default)">5000</Value>
+    </Setting>
+    <Setting Name="ConnString" Type="System.String" Scope="Application">
+      <Value Profile="(Default)">Server=localhost;Port=3306;database=$DBNAME;Uid=$DBUSER;Pwd=$DBPASSWORD;</Value>
+    </Setting>
+    <Setting Name="ServerURL" Type="System.String" Scope="Application">
+      <Value Profile="(Default)">http://192.169.1.7</Value>
+    </Setting>
+  </Settings>
+</SettingsFile>
