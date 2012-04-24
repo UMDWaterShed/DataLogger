@@ -5,11 +5,31 @@
     <Setting Name="mainTimer_Interval" Type="System.Int32" Scope="Application">
       <Value Profile="(Default)">1000</Value>
     </Setting>
-    <Setting Name="ConnString" Type="System.String" Scope="Application">
+    <Setting Name="ConnString" Type="(Connection string)" Scope="Application">
+      <DesignTimeValue Profile="(Default)">&lt;?xml version="1.0" encoding="utf-16"?&gt;
+&lt;SerializableConnectionString xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema"&gt;
+  &lt;ConnectionString&gt;Server=localhost;Port=3306;database=$DBNAME;Uid=$DBUSER;Pwd=$DBPASSWORD;&lt;/ConnectionString&gt;
+  &lt;ProviderName /&gt;
+&lt;/SerializableConnectionString&gt;</DesignTimeValue>
       <Value Profile="(Default)">Server=localhost;Port=3306;database=$DBNAME;Uid=$DBUSER;Pwd=$DBPASSWORD;</Value>
     </Setting>
     <Setting Name="COMPort" Type="System.String" Scope="Application">
       <Value Profile="(Default)">COM5</Value>
+    </Setting>
+    <Setting Name="BaudRate" Type="System.Int32" Scope="Application">
+      <Value Profile="(Default)">19200</Value>
+    </Setting>
+    <Setting Name="Parity" Type="System.IO.Ports.Parity" Scope="Application">
+      <Value Profile="(Default)">None</Value>
+    </Setting>
+    <Setting Name="DataBits" Type="System.Int32" Scope="Application">
+      <Value Profile="(Default)">8</Value>
+    </Setting>
+    <Setting Name="StopBits" Type="System.IO.Ports.StopBits" Scope="Application">
+      <Value Profile="(Default)">One</Value>
+    </Setting>
+    <Setting Name="RecentInputTimer_Interval" Type="System.Int32" Scope="Application">
+      <Value Profile="(Default)">120000</Value>
     </Setting>
   </Settings>
 </SettingsFile>
