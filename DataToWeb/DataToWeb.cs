@@ -161,7 +161,7 @@ namespace WaterShed.DataToWeb
 			string data = fastJSON.JSON.Instance.ToJSON(p);
 			byte[] dataArray = Encoding.ASCII.GetBytes(data);
 
-			logger.Trace("Data: ({0}) {1}", dataArray.Length, data);
+            logger.Trace("Data: ({0}) {1}", dataArray.Length, (data.Length < 500 ? data : data.Substring(0, 500) + "..."));
 
 			HttpWebRequest req = null;
 			HttpWebResponse res = null;
@@ -204,7 +204,7 @@ namespace WaterShed.DataToWeb
 						logger.Error("Incorrect Credentials: {0}/{1}", Settings.Default.PostUser, Settings.Default.PostPass);
 						break;
 					case HttpStatusCode.BadRequest:
-						logger.Error("Invalid Hash on uploaded data: {0}", data);
+						logger.Error("Invalid Hash on uploaded data: {0}", (data.Length < 500 ? data : data.Substring(0,500) + "..."));
 						break;
 					default:
 						logger.Error("Unsuccessful upload: {0}", response);
