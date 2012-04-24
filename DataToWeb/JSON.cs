@@ -191,7 +191,9 @@ namespace fastJSON
             public GenericGetter getter;
             public bool isStringDictionary;
             public string Name;
+#pragma warning disable 649 // Field ... is never assigned to, and will always have its default value
             public bool isCustomType;
+#pragma warning restore 649
         }
 
         SafeDictionary<string, SafeDictionary<string, myPropInfo>> _propertycache = new SafeDictionary<string, SafeDictionary<string, myPropInfo>>();
