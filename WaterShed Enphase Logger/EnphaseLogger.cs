@@ -26,7 +26,7 @@ namespace WaterShed.Enphase_Logger
 		{
 			main_timer = new Timer();
 
-			logger.Info("DataLogger Starting up.");
+			logger.Info("Enphase Logger Starting up.");
 
 			enphase = new EnphaseDataClient(Settings.Default.ServerURL);
 
@@ -38,7 +38,6 @@ namespace WaterShed.Enphase_Logger
 			catch (Exception ex)
 			{
 				logger.ErrorException("Failed to Open Database Connection.", ex);
-				//eventLog.WriteEntry("Failed to open DataBase Connection.  Exception: " + ex.Message, EventLogEntryType.Error);
 				throw ex; //need to put in more error handling
 			}
 
